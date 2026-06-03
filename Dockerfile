@@ -16,9 +16,12 @@ RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh \
     && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet \
     && rm dotnet-install.sh
 
+# Tell dotnet where it is installed and add global tools to PATH
+ENV DOTNET_ROOT=/usr/share/dotnet
+ENV PATH=$PATH:/usr/share/dotnet:/root/.dotnet/tools
+
 # Install PAC CLI as a .NET global tool
-RUN dotnet tool install --global Microsoft.PowerApps.CLI.Tool \
-    && ln -s /root/.dotnet/tools/pac /usr/local/bin/pac
+RUN dotnet tool install --global Microsoft.PowerApps.CLI.Tool
 
 WORKDIR /app
 
