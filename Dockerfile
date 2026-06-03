@@ -1,24 +1,14 @@
-FROM node:20-slim
+FROM mcr.microsoft.com/dotnet/sdk:8.0
 
-# Install PAC CLI prerequisites + the CLI itself
-# PAC CLI requires the .NET runtime
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    wget \
-    ca-certificates \
-    apt-transport-https \
+# Install Node.js 20 on top of the .NET SDK image
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install .NET 8 runtime (required by PAC CLI)
-RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh \
-    && chmod +x dotnet-install.sh \
-    && ./dotnet-install.sh --channel 8.0 --runtime dotnet --install-dir /usr/share/dotnet \
-    && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet \
-    && rm dotnet-install.sh
-
-# Install PAC CLI as a .NET global tool
-RUN dotnet tool install --global Microsoft.PowerApps.CLI.Tool \
-    && ln -s /root/.dotnet/tools/pac /usr/local/bin/pac
+# Install PAC CLI — dotnet is already fully configured in this base image
+RUN dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+ENV PATH=$PATH:/root/.dotnet/tools
 
 WORKDIR /app
 
