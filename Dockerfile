@@ -1,27 +1,26 @@
 FROM node:20-slim
 
-# Install PAC CLI prerequisites + the CLI itself
-# PAC CLI requires the .NET runtime
+# Install prerequisites including gnupg for Microsoft apt key
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     ca-certificates \
     apt-transport-https \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install .NET 8 SDK (required to run `dotnet tool install` for PAC CLI)
-RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh \
-    && chmod +x dotnet-install.sh \
-    && ./dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet \
-    && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet \
-    && rm dotnet-install.sh
+# Install .NET 8 SDK from Microsoft's official apt repository (Debian 12 / Bookworm)
+RUN curl -fsSL https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
+        -o packages-microsoft-prod.deb \
+    && dpkg -i packages-microsoft-prod.deb \
+    && rm packages-microsoft-prod.deb \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends dotnet-sdk-8.0 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Tell dotnet where it is installed and add global tools to PATH
-ENV DOTNET_ROOT=/usr/share/dotnet
-ENV PATH=$PATH:/usr/share/dotnet:/root/.dotnet/tools
-
-# Install PAC CLI as a .NET global tool
+# Install PAC CLI as a .NET global tool and add tools dir to PATH
 RUN dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+ENV PATH=$PATH:/root/.dotnet/tools
 
 WORKDIR /app
 
