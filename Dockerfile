@@ -6,9 +6,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PAC CLI — dotnet is already fully configured in this base image
-RUN dotnet tool install --global Microsoft.PowerApps.CLI.Tool
-ENV PATH=$PATH:/root/.dotnet/tools
+# Install PAC CLI for Linux — download binary tarball directly.
+# Microsoft.PowerApps.CLI.Tool (NuGet) is Windows-only; Linux uses a tarball distribution.
+RUN mkdir -p /opt/pac \
+    && curl -fsSL "https://aka.ms/PowerAppsCLI/linux" -o /tmp/pac.tar.gz \
+    && tar -xzf /tmp/pac.tar.gz -C /opt/pac \
+    && chmod +x /opt/pac/pac \
+    && ln -sf /opt/pac/pac /usr/local/bin/pac \
+    && rm /tmp/pac.tar.gz
 
 WORKDIR /app
 
