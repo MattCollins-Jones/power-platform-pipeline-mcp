@@ -1,24 +1,12 @@
-FROM node:20-slim
+FROM mcr.microsoft.com/dotnet/sdk:8.0
 
-# Install prerequisites including gnupg for Microsoft apt key
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    wget \
-    ca-certificates \
-    apt-transport-https \
-    gnupg \
+# Install Node.js 20 on top of the .NET SDK image
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install .NET 8 SDK from Microsoft's official apt repository (Debian 12 / Bookworm)
-RUN curl -fsSL https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
-        -o packages-microsoft-prod.deb \
-    && dpkg -i packages-microsoft-prod.deb \
-    && rm packages-microsoft-prod.deb \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends dotnet-sdk-8.0 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install PAC CLI as a .NET global tool and add tools dir to PATH
+# Install PAC CLI — dotnet is already fully configured in this base image
 RUN dotnet tool install --global Microsoft.PowerApps.CLI.Tool
 ENV PATH=$PATH:/root/.dotnet/tools
 
