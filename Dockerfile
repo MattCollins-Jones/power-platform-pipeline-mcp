@@ -9,10 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-transport-https \
     && rm -rf /var/lib/apt/lists/*
 
-# Install .NET 8 runtime (required by PAC CLI)
+# Install .NET 8 SDK (required to run `dotnet tool install` for PAC CLI)
 RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh \
     && chmod +x dotnet-install.sh \
-    && ./dotnet-install.sh --channel 8.0 --runtime dotnet --install-dir /usr/share/dotnet \
+    && ./dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet \
     && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet \
     && rm dotnet-install.sh
 
