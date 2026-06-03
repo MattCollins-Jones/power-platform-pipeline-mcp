@@ -7,8 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PAC CLI for Linux via Microsoft.PowerApps.CLI NuGet package.
-# The .Tool variant is Windows-only; the base package contains Linux x64 binaries.
-# The nupkg is a zip archive — we extract only the linux-x64 pac binary.
+# The nupkg is a zip — we list its contents then copy the linux binary.
 RUN apt-get update && apt-get install -y --no-install-recommends unzip \
     && rm -rf /var/lib/apt/lists/* \
     && PAC_VER=$(curl -fsSL https://api.nuget.org/v3-flatcontainer/microsoft.powerapps.cli/index.json \
@@ -18,7 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends unzip \
         "https://api.nuget.org/v3-flatcontainer/microsoft.powerapps.cli/${PAC_VER}/microsoft.powerapps.cli.${PAC_VER}.nupkg" \
         -o /tmp/pac.nupkg \
     && unzip -q /tmp/pac.nupkg -d /tmp/pac_pkg \
-    && find /tmp/pac_pkg -name "pac" ! -name "*.exe" -type f -exec cp {} /usr/local/bin/pac \; \
+    && echo "=== Package contents ===" && find /tmp/pac_pkg -type f | sort \
+    && PACBIN=$(find /tmp/pac_pkg -type f -name "pac" ! -name "*.exe" 2>/dev/null | head -1) \
+    && if [ -z "$PACBIN" ]; then \
+         echo "ERROR: pac binary not found — see listing above"; exit 1; \
+       fi \
+    && cp "$PACBIN" /usr/local/bin/pac \
     && chmod +x /usr/local/bin/pac \
     && rm -rf /tmp/pac.nupkg /tmp/pac_pkg
 
