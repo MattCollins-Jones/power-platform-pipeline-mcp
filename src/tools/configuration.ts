@@ -10,6 +10,11 @@ import {
 } from '../types';
 import { addTool } from '../utils/toolHelper';
 
+/** Escapes single quotes for safe interpolation into OData string literals. */
+function escapeODataString(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
 const ENV_VAR_TYPE_LABEL: Record<number, string> = {
   100000000: 'String',
   100000001: 'Number',
@@ -34,7 +39,7 @@ Use set_environment_variable to change a value.`,
       try {
         const client = getDataverseClient();
         const defsResponse = await client.get<ODataListResponse<EnvironmentVariableDefinition>>(
-          `/environmentvariabledefinitions?$filter=solutionid/uniquename eq '${solutionUniqueName}'&$select=environmentvariabledefinitionid,schemaname,displayname,type,defaultvalue,description`
+          `/environmentvariabledefinitions?$filter=${encodeURIComponent(`solutionid/uniquename eq '${escapeODataString(solutionUniqueName)}'`)}&$select=environmentvariabledefinitionid,schemaname,displayname,type,defaultvalue,description`
         );
         const definitions = defsResponse.data.value;
         if (definitions.length === 0) {
@@ -135,7 +140,7 @@ Use update_connection_reference to map a reference to a connection.`,
       try {
         const client = getDataverseClient();
         const response = await client.get<ODataListResponse<ConnectionReference>>(
-          `/connectionreferences?$filter=solutionid/uniquename eq '${solutionUniqueName}'&$select=connectionreferenceid,connectionreferencedisplayname,connectorid,connectionid,statecode`
+          `/connectionreferences?$filter=${encodeURIComponent(`solutionid/uniquename eq '${escapeODataString(solutionUniqueName)}'`)}&$select=connectionreferenceid,connectionreferencedisplayname,connectorid,connectionid,statecode`
         );
         const refs = response.data.value;
         if (refs.length === 0) {

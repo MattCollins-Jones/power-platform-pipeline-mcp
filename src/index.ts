@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp';
 import { randomUUID } from 'crypto';
@@ -45,6 +45,32 @@ const transports = new Map<string, StreamableHTTPServerTransport>();
 
 const app = express();
 app.use(express.json());
+
+// ─── Optional API key guard ───────────────────────────────────────────────────
+
+/**
+ * Protects MCP endpoints with a static API key.
+ *
+ * Set MCP_API_KEY in the environment to enable. When not set, all requests are
+ * allowed through (convenient for local development). When set, clients must
+ * include the header:  x-api-key: <value>
+ */
+const MCP_API_KEY = process.env.MCP_API_KEY ?? '';
+
+function requireApiKey(req: Request, res: Response, next: NextFunction): void {
+  if (!MCP_API_KEY) {
+    next();
+    return;
+  }
+  const provided = req.headers['x-api-key'];
+  if (!provided || provided !== MCP_API_KEY) {
+    res.status(401).json({ error: 'Unauthorized: provide a valid x-api-key header.' });
+    return;
+  }
+  next();
+}
+
+app.use('/mcp', requireApiKey);
 
 /** Health check — useful for Azure App Service / container probes. */
 app.get('/health', (_req: Request, res: Response) => {

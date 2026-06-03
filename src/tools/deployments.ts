@@ -13,6 +13,12 @@ const STATUS_LABEL: Record<number, string> = {
   5: 'Canceled',
 };
 
+const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isGuid(value: string): boolean {
+  return GUID_RE.test(value);
+}
+
 function formatRun(run: DeploymentStageRun): string {
   const status = STATUS_LABEL[run.statuscode] ?? `Unknown (${run.statuscode})`;
   const error = run.errormessage ? `\n    Error: ${run.errormessage}` : '';
@@ -45,23 +51,30 @@ The deployment runs asynchronously; use get_deployment_status to monitor progres
       environment: z.string().describe('URL of the source Power Platform environment, e.g. https://yourorg.crm.dynamics.com'),
     },
     async ({ solutionName, stageId, currentVersion, newVersion, environment }) => {
-      const result = await runPacCommand([
-        'pipeline', 'deploy',
-        '--solutionName', solutionName,
-        '--stageId', stageId,
-        '--currentVersion', currentVersion,
-        '--newVersion', newVersion,
-        '--environment', environment,
-      ]);
-      if (!result.success) {
+      try {
+        const result = await runPacCommand([
+          'pipeline', 'deploy',
+          '--solutionName', solutionName,
+          '--stageId', stageId,
+          '--currentVersion', currentVersion,
+          '--newVersion', newVersion,
+          '--environment', environment,
+        ]);
+        if (!result.success) {
+          return {
+            content: [{ type: 'text' as const, text: `Deployment failed to start.\n\nPAC CLI output:\n${result.stdout || result.stderr}` }],
+            isError: true,
+          };
+        }
         return {
-          content: [{ type: 'text' as const, text: `Deployment failed to start.\n\nPAC CLI output:\n${result.stdout || result.stderr}` }],
+          content: [{ type: 'text' as const, text: `Deployment initiated successfully.\n\nPAC CLI output:\n${result.stdout}\n\nUse get_deployment_status or get_deployment_history to monitor progress.` }],
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text' as const, text: `Error triggering deployment: ${error instanceof Error ? error.message : String(error)}` }],
           isError: true,
         };
       }
-      return {
-        content: [{ type: 'text' as const, text: `Deployment initiated successfully.\n\nPAC CLI output:\n${result.stdout}\n\nUse get_deployment_status or get_deployment_history to monitor progress.` }],
-      };
     }
   );
 
@@ -76,6 +89,12 @@ Obtain the deploymentStageRunId from deploy_solution output or get_deployment_hi
       deploymentStageRunId: z.string().describe('GUID of the deployment stage run (deploymentstagerunid) to check.'),
     },
     async ({ deploymentStageRunId }) => {
+      if (!isGuid(deploymentStageRunId)) {
+        return {
+          content: [{ type: 'text' as const, text: `Invalid deploymentStageRunId: "${deploymentStageRunId}" is not a valid GUID.` }],
+          isError: true,
+        };
+      }
       try {
         const client = getDataverseClient();
         const response = await client.get<DeploymentStageRun>(
