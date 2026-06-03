@@ -6,14 +6,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PAC CLI for Linux — download binary tarball directly.
-# Microsoft.PowerApps.CLI.Tool (NuGet) is Windows-only; Linux uses a tarball distribution.
-RUN mkdir -p /opt/pac \
-    && curl -fsSL "https://aka.ms/PowerAppsCLI/linux" -o /tmp/pac.tar.gz \
-    && tar -xzf /tmp/pac.tar.gz -C /opt/pac \
-    && chmod +x /opt/pac/pac \
-    && ln -sf /opt/pac/pac /usr/local/bin/pac \
-    && rm /tmp/pac.tar.gz
+# Install PAC CLI for Linux via Microsoft.PowerApps.CLI NuGet package.
+# The .Tool variant is Windows-only; the base package contains Linux x64 binaries.
+# The nupkg is a zip archive — we extract only the linux-x64 pac binary.
+RUN apt-get update && apt-get install -y --no-install-recommends unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && PAC_VER=$(curl -fsSL https://api.nuget.org/v3-flatcontainer/microsoft.powerapps.cli/index.json \
+        | python3 -c "import sys,json; print(json.load(sys.stdin)['versions'][-1])") \
+    && echo "Installing PAC CLI ${PAC_VER}" \
+    && curl -fsSL \
+        "https://api.nuget.org/v3-flatcontainer/microsoft.powerapps.cli/${PAC_VER}/microsoft.powerapps.cli.${PAC_VER}.nupkg" \
+        -o /tmp/pac.nupkg \
+    && unzip -q /tmp/pac.nupkg -d /tmp/pac_pkg \
+    && find /tmp/pac_pkg -name "pac" ! -name "*.exe" -type f -exec cp {} /usr/local/bin/pac \; \
+    && chmod +x /usr/local/bin/pac \
+    && rm -rf /tmp/pac.nupkg /tmp/pac_pkg
 
 WORKDIR /app
 
