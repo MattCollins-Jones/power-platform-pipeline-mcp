@@ -6,25 +6,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PAC CLI for Linux via Microsoft.PowerApps.CLI NuGet package.
-# The nupkg is a zip — we list its contents then copy the linux binary.
-RUN apt-get update && apt-get install -y --no-install-recommends unzip \
-    && rm -rf /var/lib/apt/lists/* \
-    && PAC_VER=$(curl -fsSL https://api.nuget.org/v3-flatcontainer/microsoft.powerapps.cli/index.json \
-        | python3 -c "import sys,json; print(json.load(sys.stdin)['versions'][-1])") \
-    && echo "Installing PAC CLI ${PAC_VER}" \
-    && curl -fsSL \
-        "https://api.nuget.org/v3-flatcontainer/microsoft.powerapps.cli/${PAC_VER}/microsoft.powerapps.cli.${PAC_VER}.nupkg" \
-        -o /tmp/pac.nupkg \
-    && unzip -q /tmp/pac.nupkg -d /tmp/pac_pkg \
-    && echo "=== Package contents ===" && find /tmp/pac_pkg -type f | sort \
-    && PACBIN=$(find /tmp/pac_pkg -type f -name "pac" ! -name "*.exe" 2>/dev/null | head -1) \
-    && if [ -z "$PACBIN" ]; then \
-         echo "ERROR: pac binary not found — see listing above"; exit 1; \
-       fi \
-    && cp "$PACBIN" /usr/local/bin/pac \
-    && chmod +x /usr/local/bin/pac \
-    && rm -rf /tmp/pac.nupkg /tmp/pac_pkg
+# Install PAC CLI as a .NET global tool (cross-platform, framework-dependent).
+# Microsoft.PowerApps.CLI is the Linux-compatible package (NOT the .Tool variant which is Windows-only).
+RUN dotnet tool install --global Microsoft.PowerApps.CLI \
+    && ln -s /root/.dotnet/tools/pac /usr/local/bin/pac
+
+ENV PATH="/root/.dotnet/tools:${PATH}"
 
 WORKDIR /app
 
