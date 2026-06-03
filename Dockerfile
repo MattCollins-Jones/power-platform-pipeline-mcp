@@ -16,12 +16,16 @@ ENV PATH="/root/.dotnet/tools:${PATH}"
 
 WORKDIR /app
 
-# Install dependencies first (layer cache optimisation)
-COPY package*.json ./
-RUN npm ci --omit=dev
+# Install all deps including devDependencies (TypeScript compiler needed for build)
+COPY package*.json tsconfig.json ./
+RUN npm ci
 
-# Copy compiled output
-COPY dist/ ./dist/
+# Compile TypeScript inside the image — dist/ is in .gitignore and never pre-built
+COPY src/ ./src/
+RUN npm run build
+
+# Remove dev dependencies after build to keep the image lean
+RUN npm prune --omit=dev
 
 EXPOSE 3000
 
