@@ -21,25 +21,40 @@ for (const key of REQUIRED_ENV_VARS) {
   }
 }
 
-// ─── Create & configure MCP server ───────────────────────────────────────────
-
-const mcpServer = new McpServer({
-  name: 'power-platform-pipeline-mcp',
-  version: '1.0.0',
-});
-
-registerPipelineTools(mcpServer);
-registerDeploymentTools(mcpServer);
-registerApprovalTools(mcpServer);
-registerConfigurationTools(mcpServer);
-
-// ─── Session store (Streamable HTTP with per-session transports) ──────────────
+// ─── MCP server factory ───────────────────────────────────────────────────────
 
 /**
- * Each MCP client session gets its own StreamableHTTPServerTransport.
- * The transport is stored here so subsequent GET/DELETE requests can reuse it.
+ * Creates a fresh McpServer with all tools registered.
+ *
+ * A new instance must be created per session because McpServer.connect() can
+ * only be called once per instance. Reusing a single server across sessions
+ * causes the transport map to desync and Copilot Studio sees zero tools.
  */
-const transports = new Map<string, StreamableHTTPServerTransport>();
+function createMcpServer(): McpServer {
+  const server = new McpServer({
+    name: 'power-platform-pipeline-mcp',
+    version: '1.0.0',
+  });
+  registerPipelineTools(server);
+  registerDeploymentTools(server);
+  registerApprovalTools(server);
+  registerConfigurationTools(server);
+  return server;
+}
+
+// ─── Session store (Streamable HTTP with per-session server + transport) ──────
+
+interface Session {
+  server: McpServer;
+  transport: StreamableHTTPServerTransport;
+}
+
+/**
+ * Keyed by the mcp-session-id assigned during initialisation.
+ * Both server and transport are stored so the server is not garbage-collected
+ * while the session is active.
+ */
+const sessions = new Map<string, Session>();
 
 // ─── Express HTTP server ──────────────────────────────────────────────────────
 
@@ -86,31 +101,32 @@ app.get('/health', (_req: Request, res: Response) => {
 app.post('/mcp', async (req: Request, res: Response) => {
   try {
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
-    let transport: StreamableHTTPServerTransport;
 
-    if (sessionId && transports.has(sessionId)) {
-      transport = transports.get(sessionId)!;
+    if (sessionId && sessions.has(sessionId)) {
+      // Reuse existing session
+      const { transport } = sessions.get(sessionId)!;
+      await transport.handleRequest(req, res, req.body);
     } else {
-      // New session: create transport and connect server to it
-      transport = new StreamableHTTPServerTransport({
+      // New session: create a fresh server + transport pair
+      const server = createMcpServer();
+      const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {
-          transports.set(id, transport);
+          sessions.set(id, { server, transport });
           console.log(`[mcp] Session initialised: ${id}`);
         },
       });
 
       transport.onclose = () => {
         if (transport.sessionId) {
-          transports.delete(transport.sessionId);
+          sessions.delete(transport.sessionId);
           console.log(`[mcp] Session closed: ${transport.sessionId}`);
         }
       };
 
-      await mcpServer.connect(transport);
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
     }
-
-    await transport.handleRequest(req, res, req.body);
   } catch (err) {
     console.error('[mcp] POST error:', err);
     if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
@@ -125,12 +141,12 @@ app.get('/mcp', async (req: Request, res: Response) => {
   try {
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
-    if (!sessionId || !transports.has(sessionId)) {
+    if (!sessionId || !sessions.has(sessionId)) {
       res.status(400).json({ error: 'Valid mcp-session-id header required. Call POST /mcp first.' });
       return;
     }
 
-    const transport = transports.get(sessionId)!;
+    const { transport } = sessions.get(sessionId)!;
     await transport.handleRequest(req, res);
   } catch (err) {
     console.error('[mcp] GET error:', err);
@@ -145,14 +161,14 @@ app.delete('/mcp', async (req: Request, res: Response) => {
   try {
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
-    if (!sessionId || !transports.has(sessionId)) {
+    if (!sessionId || !sessions.has(sessionId)) {
       res.status(404).json({ error: 'Session not found.' });
       return;
     }
 
-    const transport = transports.get(sessionId)!;
+    const { transport } = sessions.get(sessionId)!;
     await transport.handleRequest(req, res);
-    transports.delete(sessionId);
+    sessions.delete(sessionId);
   } catch (err) {
     console.error('[mcp] DELETE error:', err);
     if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
