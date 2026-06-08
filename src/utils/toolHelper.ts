@@ -23,6 +23,9 @@ export function addTool<T extends Record<string, z.ZodTypeAny>>(
   schema: T,
   handler: (args: z.infer<z.ZodObject<T>>) => Promise<ToolResult>
 ): void {
+  // Use .call(server, ...) to preserve the `this` binding. Casting server.tool
+  // as a bare function and invoking it directly loses the class instance binding,
+  // which would cause the MCP SDK to fail to register tools at runtime.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (server.tool as (...a: any[]) => void)(name, description, schema, handler);
+  (server.tool as (...a: any[]) => void).call(server, name, description, schema, handler);
 }
