@@ -1,8 +1,8 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { getDataverseClient, extractDataverseError } from '../clients/dataverseClient';
-import { ODataListResponse, DeploymentStageRun } from '../types';
-import { addTool } from '../utils/toolHelper';
+import { getDataverseClient, extractDataverseError } from '../clients/dataverseClient.js';
+import { ODataListResponse, DeploymentStageRun } from '../types/index.js';
+import { addTool } from '../utils/toolHelper.js';
 
 const PENDING_APPROVAL_STATUSCODE = 4;
 

@@ -1,9 +1,9 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { getDataverseClient, extractDataverseError } from '../clients/dataverseClient';
-import { runPacCommand } from '../clients/pacCliClient';
-import { ODataListResponse, DeploymentStageRun } from '../types';
-import { addTool } from '../utils/toolHelper';
+import { getDataverseClient, extractDataverseError } from '../clients/dataverseClient.js';
+import { runPacCommand } from '../clients/pacCliClient.js';
+import { ODataListResponse, DeploymentStageRun } from '../types/index.js';
+import { addTool } from '../utils/toolHelper.js';
 
 const STATUS_LABEL: Record<number, string> = {
   1: 'Deploying',

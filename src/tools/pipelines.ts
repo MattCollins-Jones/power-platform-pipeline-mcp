@@ -1,8 +1,8 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { getDataverseClient, extractDataverseError } from '../clients/dataverseClient';
-import { ODataListResponse, Pipeline, PipelineStage } from '../types';
-import { addTool } from '../utils/toolHelper';
+import { getDataverseClient, extractDataverseError } from '../clients/dataverseClient.js';
+import { ODataListResponse, Pipeline, PipelineStage } from '../types/index.js';
+import { addTool } from '../utils/toolHelper.js';
 
 export function registerPipelineTools(server: McpServer): void {
   // --- list_pipelines

@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { getAccessToken, getDataverseScope } from '../auth/msalClient';
+import { getAccessToken, getDataverseScope } from '../auth/msalClient.js';
 
 let instance: AxiosInstance | null = null;
 
