@@ -1,14 +1,14 @@
 import 'dotenv/config';
 
 import express, { Request, Response, NextFunction } from 'express';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { randomUUID } from 'crypto';
 
-import { registerPipelineTools } from './tools/pipelines';
-import { registerDeploymentTools } from './tools/deployments';
-import { registerApprovalTools } from './tools/approvals';
-import { registerConfigurationTools } from './tools/configuration';
+import { registerPipelineTools } from './tools/pipelines.js';
+import { registerDeploymentTools } from './tools/deployments.js';
+import { registerApprovalTools } from './tools/approvals.js';
+import { registerConfigurationTools } from './tools/configuration.js';
 
 // ─── Validate required environment variables ─────────────────────────────────
 

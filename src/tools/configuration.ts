@@ -1,14 +1,14 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { getDataverseClient, extractDataverseError } from '../clients/dataverseClient';
+import { getDataverseClient, extractDataverseError } from '../clients/dataverseClient.js';
 import {
   ODataListResponse,
   EnvironmentVariableDefinition,
   EnvironmentVariableValue,
   EnvironmentVariableWithValue,
   ConnectionReference,
-} from '../types';
-import { addTool } from '../utils/toolHelper';
+} from '../types/index.js';
+import { addTool } from '../utils/toolHelper.js';
 
 /** Escapes single quotes for safe interpolation into OData string literals. */
 function escapeODataString(value: string): string {
